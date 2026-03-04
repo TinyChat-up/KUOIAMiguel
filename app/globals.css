@@ -14,3 +14,21 @@
 body {
   @apply bg-background text-foreground antialiased;
 }
+
+@layer base {
+  header nav a,
+  main h1,
+  main h2 {
+    transition: transform 0.25s ease, color 0.25s ease, text-shadow 0.25s ease;
+    transform-origin: center;
+    display: inline-block;
+  }
+
+  header nav a:hover,
+  main h1:hover,
+  main h2:hover {
+    transform: translateY(-2px) scale(1.03);
+    color: hsl(var(--primary));
+    text-shadow: 0 6px 16px rgba(30, 91, 66, 0.22);
+  }
+}
