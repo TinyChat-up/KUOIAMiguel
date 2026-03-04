@@ -1,30 +1,26 @@
-import Link from "next/link";
-import { getSupabaseServerClient } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 export default async function MarketplacePage() {
-  const supabase = getSupabaseServerClient();
-  const { data: products } = await supabase.from("products").select("id,title,price,condition,city,created_at").eq("status", "active").order("created_at", { ascending: false }).limit(30);
+  const supabase = createClient();
+  const { data: products } = await supabase
+    .from("products")
+    .select("id,title,price,city")
+    .order("created_at", { ascending: false })
+    .limit(20);
 
   return (
-    <div className="space-y-4 py-6">
+    <div className="space-y-4">
       <h1 className="text-2xl font-bold">Marketplace</h1>
-      <div className="grid gap-3">
-        {products?.map((p) => (
-          <Card key={p.id}>
-            <Link href={`/marketplace/${p.id}`} className="flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold">{p.title}</h2>
-                <p className="text-sm text-gray-600">{p.city}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-bold">{p.price}€</p>
-                <Badge>{p.condition}</Badge>
-              </div>
-            </Link>
+      <div className="grid gap-3 md:grid-cols-2">
+        {products?.map((item) => (
+          <Card key={item.id}>
+            <h2 className="font-semibold">{item.title}</h2>
+            <p className="text-sm text-gray-600">{item.city}</p>
+            <p className="text-sm font-medium">{item.price}€</p>
           </Card>
         ))}
+        {!products?.length && <p>No hay productos todavía.</p>}
       </div>
     </div>
   );

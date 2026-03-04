@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/server";
 
-export function Header() {
+export async function Header() {
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
   return (
     <header className="border-b bg-white/80 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between p-4">
@@ -12,11 +18,19 @@ export function Header() {
         </div>
         <div className="flex items-center gap-2">
           <Button asChild>
-            <Link href="/marketplace/new">Publicar</Link>
+            <Link href="/marketplace">Publicar</Link>
           </Button>
-          <Button variant="outline" asChild>
-            <Link href="/profile">Acceder</Link>
-          </Button>
+          {user ? (
+            <form action="/logout" method="post">
+              <Button variant="outline" type="submit">
+                Salir
+              </Button>
+            </form>
+          ) : (
+            <Button variant="outline" asChild>
+              <Link href="/login">Acceder</Link>
+            </Button>
+          )}
         </div>
       </nav>
     </header>

@@ -1,60 +1,122 @@
 # KUOIA
 
-Marketplace escolar con Next.js + Supabase + Stripe.
+Proyecto base listo para desplegar en **Vercel** con **Next.js 14 App Router + TypeScript strict + Tailwind + shadcn/ui + Supabase + Stripe (test)**.
 
 ## Stack
-- Next.js 14 (App Router) + TypeScript strict
-- TailwindCSS + componentes estilo shadcn/ui
-- Supabase (Auth, Postgres, Storage, Realtime)
-- Stripe (modo test) para suscripciones de anunciantes
+- Next.js 14 (App Router)
+- TypeScript strict
+- TailwindCSS + componentes UI estilo shadcn
+- Supabase (`@supabase/supabase-js` v2 + `@supabase/ssr`)
+- Stripe Node SDK
+- Zod + React Hook Form
 
-## Estructura principal
-- `app/` rutas App Router
-- `components/` UI + formularios
-- `lib/` clientes Supabase/Stripe
-- `db/schema.sql` esquema completo + RLS + policies
-- `db/seed.sql` datos opcionales
+## Rutas incluidas
+- `/` Home
+- `/marketplace`
+- `/services`
+- `/schools`
+- `/login`
+- `/signup`
+- `/profile` (protegida)
+- `/billing` (protegida)
+- `/api/health`
+- `/api/stripe/create-checkout-session`
+- `/api/stripe/customer-portal`
+- `/api/stripe/webhook`
 
-## Configuración paso a paso
-1. Crear proyecto en Supabase.
-2. En SQL Editor, ejecutar `db/schema.sql`.
-3. (Opcional) Ejecutar `db/seed.sql` reemplazando UUIDs de usuarios por IDs reales de `auth.users`.
-4. Crear buckets públicos:
-   - `product-images`
-   - `service-images`
-   y ejecutar las policies de storage comentadas al final de `db/schema.sql`.
-5. Configurar Auth:
-   - Habilitar Email + Magic Link.
-   - URL de callback: `http://localhost:3000/auth/callback` y en producción dominio Vercel.
-6. Configurar Stripe (test):
-   - Crear producto + precio mensual.
-   - Copiar `STRIPE_SECRET_KEY` y `STRIPE_PRICE_ID_MONTHLY`.
-   - Webhook endpoint: `https://<tu-dominio>/api/stripe/webhook`
-   - Escuchar eventos: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.subscription.created`.
-   - Copiar `STRIPE_WEBHOOK_SECRET`.
-7. Copiar `.env.example` a `.env.local` y completar valores.
-8. Instalar dependencias y arrancar:
+## Variables de entorno (local y Vercel)
+Usa exactamente estas variables:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (solo server)
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_ID_MONTHLY`
+- `NEXT_PUBLIC_SITE_URL` (`https://tu-dominio.vercel.app` en prod)
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (si usas Stripe.js en cliente)
+
+Copia `.env.example` a `.env.local` y completa valores.
+
+---
+
+## Setup local (paso a paso)
+1. Instala dependencias:
    ```bash
    npm install
+   ```
+2. Configura `.env.local` desde `.env.example`.
+3. Crea el proyecto en Supabase.
+4. Abre SQL Editor y ejecuta `db/schema.sql` completo.
+5. En Supabase Auth > Providers, habilita **Email**.
+6. Configura URLs de Auth:
+   - Site URL local: `http://localhost:3000`
+   - Redirect URL local: `http://localhost:3000/auth/callback`
+7. Arranca en local:
+   ```bash
    npm run dev
    ```
-9. Deploy Vercel:
-   - Importar repo.
-   - Añadir mismas variables de entorno.
-   - Configurar URL pública en `NEXT_PUBLIC_SITE_URL`.
 
-## Rutas mínimas implementadas
-- `/` home
-- `/marketplace`, `/marketplace/new`, `/marketplace/[id]`
-- `/services`, `/services/[id]`
-- `/schools`, `/schools/[id]`
-- `/messages`
-- `/profile`
-- `/admin`
+## Stripe (test mode)
+1. En Stripe crea un producto recurrente mensual y guarda su `price_id`.
+2. Añade en `.env.local`:
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_PRICE_ID_MONTHLY`
+3. Ejecuta webhook local con Stripe CLI (opcional):
+   ```bash
+   stripe listen --forward-to localhost:3000/api/stripe/webhook
+   ```
+4. Copia el signing secret en `STRIPE_WEBHOOK_SECRET`.
 
-## Notas funcionales
-- Alta de productos vía `POST /api/products`.
-- Stripe checkout y customer portal:
-  - `POST /api/stripe/checkout`
-  - `POST /api/stripe/portal`
-- Webhook Stripe sincroniza suscripciones y estado en `services`.
+> Importante: el webhook usa `runtime = "nodejs"` y firma con **raw body** (`request.text()`), compatible con Vercel.
+
+## Deploy en Vercel
+1. Sube repo a GitHub.
+2. En Vercel: **New Project** > importa el repositorio.
+3. Añade todas las variables de entorno listadas arriba.
+4. Define `NEXT_PUBLIC_SITE_URL=https://tu-app.vercel.app`.
+5. Deploy.
+
+## Configuración Supabase para producción
+En Supabase Auth:
+- Site URL: `https://tu-app.vercel.app`
+- Redirect URL: `https://tu-app.vercel.app/auth/callback`
+
+## Configuración webhook Stripe para producción
+1. En Stripe Dashboard > Developers > Webhooks > Add endpoint.
+2. Endpoint:
+   `https://tu-app.vercel.app/api/stripe/webhook`
+3. Eventos:
+   - `checkout.session.completed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+4. Copia signing secret a `STRIPE_WEBHOOK_SECRET` en Vercel.
+
+## Checklist post-deploy
+- [ ] `/api/health` devuelve `{ ok: true }`
+- [ ] Home y rutas públicas cargan (`/`, `/marketplace`, `/services`, `/schools`)
+- [ ] Signup + login funciona
+- [ ] `/profile` y `/billing` redirigen a `/login` sin sesión
+- [ ] Botón **Suscribirme** crea checkout de Stripe
+- [ ] Botón **Gestionar suscripción** abre customer portal
+- [ ] Webhook actualiza `stripe_customers` y `stripe_subscriptions`
+
+## Scripts
+- `npm run dev`
+- `npm run build`
+- `npm run start`
+- `npm run lint`
+
+## Troubleshooting
+### 1) Login funciona pero redirect falla
+Verifica que las URLs en Supabase Auth coinciden exactamente con local/prod, incluyendo `https` en Vercel.
+
+### 2) Webhook Stripe devuelve 400
+Revisa `STRIPE_WEBHOOK_SECRET` y que apunte al endpoint correcto. Asegúrate de reenviar el evento al dominio actual de Vercel.
+
+### 3) Error RLS al leer/escribir
+Ejecuta `db/schema.sql` completo. Si cambiaste políticas, revisa `auth.uid()` y ownership de filas.
+
+### 4) Build falla en Vercel
+Confirma variables env, que no faltan exports de páginas/route handlers, y que las rutas de Stripe usan runtime Node.js.

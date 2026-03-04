@@ -1,29 +1,29 @@
-import { getSupabaseServerClient } from "@/lib/supabase";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 export default async function ProfilePage() {
-  const supabase = getSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <p>Inicia sesión con magic link para acceder al perfil.</p>;
+  const supabase = createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
-  const { data: profile } = await supabase.from("profiles").select("name, role, city").eq("id", user.id).single();
-  const { data: products } = await supabase.from("products").select("id,title,status").eq("user_id", user.id);
+  if (!user) {
+    return <p>Debes iniciar sesión.</p>;
+  }
+
+  const { data: profile } = await supabase.from("profiles").select("full_name, role").eq("id", user.id).maybeSingle();
 
   return (
-    <div className="space-y-4 py-6">
+    <div className="space-y-4">
       <h1 className="text-2xl font-bold">Mi perfil</h1>
       <Card>
-        <p>{profile?.name}</p>
-        <p className="text-sm">{profile?.role} · {profile?.city}</p>
+        <p className="font-medium">{profile?.full_name ?? user.email}</p>
+        <p className="text-sm text-gray-600">Rol: {profile?.role ?? "user"}</p>
       </Card>
-      <Card>
-        <h2 className="font-semibold">Mis anuncios</h2>
-        <ul>{products?.map((p) => <li key={p.id}>{p.title} ({p.status})</li>)}</ul>
-      </Card>
-      <form action="/api/stripe/portal" method="post">
-        <Button type="submit">Gestionar suscripción</Button>
-      </form>
+      <Link href="/billing" className="text-sm underline">
+        Ir a facturación
+      </Link>
     </div>
   );
 }
