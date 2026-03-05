@@ -1,26 +1,13 @@
-import Link from "next/link";
-import { getSupabaseServerClient } from "@/lib/supabase";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/PageHeader";
+import { SchoolCard } from "@/components/SchoolCard";
+import { getSchools } from "@/lib/mock-api";
 
 export default async function SchoolsPage() {
-  const supabase = getSupabaseServerClient();
-  const { data: schools } = await supabase.from("schools").select("id,name,city,verified").order("name");
-
+  const schools = await getSchools();
   return (
-    <div className="space-y-4 py-6">
-      <h1 className="text-2xl font-bold">Colegios</h1>
-      {schools?.map((school) => (
-        <Card key={school.id}>
-          <Link href={`/schools/${school.id}`} className="flex items-center justify-between">
-            <div>
-              <h2 className="font-semibold">{school.name}</h2>
-              <p className="text-sm">{school.city}</p>
-            </div>
-            {school.verified && <Badge className="bg-emerald-100">VERIFICADO</Badge>}
-          </Link>
-        </Card>
-      ))}
+    <div className="space-y-6">
+      <PageHeader title="Coles" description="Fichas verificadas de colegios con productos y servicios relacionados." />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{schools.map((school) => <SchoolCard key={school.id} school={school} />)}</div>
     </div>
   );
 }
