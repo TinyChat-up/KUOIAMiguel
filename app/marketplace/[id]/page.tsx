@@ -1,25 +1,24 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
-import { getSupabaseServerClient } from "@/lib/supabase";
-import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getProductById, getSchoolById } from "@/lib/mock-api";
 
-export default async function MarketplaceDetail({ params }: { params: { id: string } }) {
-  const supabase = getSupabaseServerClient();
-  const { data: product } = await supabase.from("products").select("*, profiles(name)").eq("id", params.id).single();
-  if (!product) notFound();
-
+export default async function ProductDetailPage({ params }: { params: { id: string } }) {
+  const product = await getProductById(params.id);
+  if (!product) return notFound();
+  const school = await getSchoolById(product.schoolId);
   return (
-    <div className="space-y-4 py-6">
-      <h1 className="text-3xl font-bold">{product.title}</h1>
-      <Card>
-        <p>{product.description}</p>
-        <p className="mt-2 text-lg font-semibold">{product.price}€</p>
-        <p className="text-sm">Vendedor: {product.profiles?.name ?? "Usuario"}</p>
-      </Card>
-      <div className="flex gap-2">
-        <Button>Chat</Button>
-        <Button variant="outline">Reportar</Button>
+    <article className="grid gap-8 md:grid-cols-2">
+      <Image src={product.image} alt={product.title} width={900} height={600} className="h-full w-full rounded-2xl object-cover" />
+      <div className="space-y-4">
+        <Badge>{product.category}</Badge>
+        <h1 className="text-3xl font-bold">{product.title}</h1>
+        <p className="text-foreground/70">{product.description}</p>
+        <p className="text-2xl font-semibold">{product.price}€</p>
+        <p className="text-sm">Ciudad: {product.city} · Colegio: {school?.name}</p>
+        <Button>Contactar (demo)</Button>
       </div>
-    </div>
+    </article>
   );
 }
