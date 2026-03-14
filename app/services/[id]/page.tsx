@@ -1,22 +1,25 @@
-import Image from "next/image";
 import { notFound } from "next/navigation";
-import { RatingStars } from "@/components/RatingStars";
-import { Badge } from "@/components/ui/badge";
-import { getAverageRating, getServiceById, getSchools } from "@/lib/mock-api";
+import { getSupabaseServerClient } from "@/lib/supabase";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
-export default async function ServiceDetailPage({ params }: { params: { id: string } }) {
-  const service = await getServiceById(params.id);
-  if (!service) return notFound();
-  const schools = await getSchools();
-  const linked = schools.filter((school) => service.schoolIds.includes(school.id));
+export default async function ServiceDetail({ params }: { params: { id: string } }) {
+  const supabase = getSupabaseServerClient();
+  const { data: service } = await supabase.from("services").select("*, service_schools(school_id, schools(name))").eq("id", params.id).single();
+  if (!service) notFound();
+
   return (
-    <article className="space-y-6">
-      <Image src={service.image} alt={service.name} width={1200} height={500} className="h-72 w-full rounded-3xl object-cover" />
-      <Badge>{service.category}</Badge>
-      <h1 className="text-4xl font-bold">{service.name}</h1>
-      <RatingStars value={getAverageRating(service.id)} />
-      <p className="max-w-3xl text-foreground/70">{service.description}</p>
-      <section><h2 className="text-xl font-semibold">Trabaja con</h2><div className="mt-3 flex flex-wrap gap-2">{linked.map((school) => <Badge key={school.id}>{school.name}</Badge>)}</div></section>
-    </article>
+    <div className="space-y-4 py-6">
+      <h1 className="text-3xl font-bold">{service.title}</h1>
+      <Card>
+        <p>{service.description}</p>
+        <p className="mt-2">Zona: {service.city}</p>
+        <p className="mt-2 text-sm">Colegios asociados: {service.service_schools?.map((s: any) => s.schools?.name).join(", ") || "Ninguno"}</p>
+      </Card>
+      <div className="flex gap-2">
+        <Button>Anunciarme / Gestionar suscripción</Button>
+        <Button variant="outline">Contactar</Button>
+      </div>
+    </div>
   );
 }
