@@ -1,34 +1,31 @@
-"use client";
+import Link from "next/link";
+import { getSupabaseServerClient } from "@/lib/supabase";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
-import { useEffect, useMemo, useState } from "react";
-import { CategoryChips } from "@/components/CategoryChips";
-import { EmptyState } from "@/components/EmptyState";
-import { PageHeader } from "@/components/PageHeader";
-import { ServiceCard } from "@/components/ServiceCard";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getAverageRating, getServices } from "@/lib/mock-api";
-import { Service } from "@/lib/types";
+const categories = ["Transporte", "Limpieza", "Extraescolares", "Comedor", "Clases particulares", "Orientación", "Logopedia", "Otros"];
 
-export default function ServicesPage() {
-  const [items, setItems] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [active, setActive] = useState("Todas");
-
-  useEffect(() => {
-    getServices().then((data) => {
-      setItems(data);
-      setLoading(false);
-    });
-  }, []);
-
-  const categories = useMemo(() => ["Todas", ...Array.from(new Set(items.map((i) => i.category)))], [items]);
-  const filtered = active === "Todas" ? items : items.filter((item) => item.category === active);
+export default async function ServicesPage() {
+  const supabase = getSupabaseServerClient();
+  const { data: services } = await supabase.from("services").select("id,title,category,city,subscription_status").order("created_at", { ascending: false });
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Servicios" description="Descubre proveedores educativos con chips por categoría y ratings calculados." />
-      <CategoryChips categories={categories} active={active} onSelect={setActive} />
-      {loading ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-72" />)}</div> : filtered.length ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{filtered.map((service) => <ServiceCard key={service.id} service={service} rating={getAverageRating(service.id)} />)}</div> : <EmptyState title="No hay servicios" description="No existen resultados para esta categoría." />}
+    <div className="space-y-4 py-6">
+      <h1 className="text-2xl font-bold">Servicios</h1>
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {categories.map((c) => <Badge key={c}>{c}</Badge>)}
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        {services?.map((service) => (
+          <Card key={service.id}>
+            <Link href={`/services/${service.id}`}>
+              <h2 className="font-semibold">{service.title}</h2>
+              <p className="text-sm">{service.category} · {service.city}</p>
+              <p className="text-xs text-primary">{service.subscription_status === "active" ? "Anunciante activo" : "Sin suscripción"}</p>
+            </Link>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
