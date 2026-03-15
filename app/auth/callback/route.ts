@@ -1,20 +1,36 @@
-import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  if (code) {
-    const cookieStore = cookies();
-    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-      cookies: {
-        get(name) { return cookieStore.get(name)?.value; },
-        set() {},
-        remove() {}
-      }
-    });
-    await supabase.auth.exchangeCodeForSession(code);
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
+  let response = NextResponse.redirect(new URL("/profile", request.url));
+
+  if (!code) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
-  return NextResponse.redirect(`${origin}/profile`);
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.headers.get("cookie")
+            ?.split("; ")
+            .find((cookie) => cookie.startsWith(`${name}=`))
+            ?.split("=")[1];
+        },
+        set(name: string, value: string, options: Record<string, string | number | boolean>) {
+          response.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options: Record<string, string | number | boolean>) {
+          response.cookies.set({ name, value: "", ...options });
+        }
+      }
+    }
+  );
+
+  await supabase.auth.exchangeCodeForSession(code);
+  return response;
 }
